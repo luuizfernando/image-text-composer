@@ -2,6 +2,7 @@ import { Canvas as FabricCanvas } from "fabric";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Type, Trash2 } from "lucide-react";
 import { TextLayer } from "./ImageEditor";
+import type { Dispatch, SetStateAction } from "react";
 
 interface LayersPanelProps {
   layers: TextLayer[];
@@ -9,6 +10,8 @@ interface LayersPanelProps {
   onLayerSelect: (layerId: string | null) => void;
   canvas: FabricCanvas | null;
   onDeleteLayer: (layerId: string) => void;
+  onUpdateLayers: Dispatch<SetStateAction<TextLayer[]>>;
+  onAfterCanvasChange: () => void;
 }
 
 export const LayersPanel = ({
@@ -17,6 +20,8 @@ export const LayersPanel = ({
   onLayerSelect,
   canvas,
   onDeleteLayer,
+  onUpdateLayers,
+  onAfterCanvasChange,
 }: LayersPanelProps) => {
   const selectLayer = (layerId: string) => {
     if (!canvas) return;
@@ -26,7 +31,6 @@ export const LayersPanel = ({
     
     if (targetObject) {
       canvas.setActiveObject(targetObject);
-      targetObject.bringToFront?.();
       canvas.renderAll();
       onLayerSelect(layerId);
     }
@@ -75,6 +79,23 @@ export const LayersPanel = ({
     }
     
     canvas.renderAll();
+
+    // Sincronizar a ordem no estado com a ordem do canvas
+    const orderIndexById = new Map<string, number>();
+    canvas.getObjects().forEach((obj: any, index: number) => {
+      if (obj?.data?.id) orderIndexById.set(obj.data.id as string, index);
+    });
+
+    onUpdateLayers(prev => {
+      const next = [...prev].sort((a, b) => {
+        const ia = orderIndexById.get(a.id) ?? 0;
+        const ib = orderIndexById.get(b.id) ?? 0;
+        return ia - ib; // mesma ordem do canvas (base->topo)
+      });
+      return next;
+    });
+
+    onAfterCanvasChange();
   };
 
   return (

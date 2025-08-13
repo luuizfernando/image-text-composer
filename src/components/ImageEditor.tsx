@@ -433,6 +433,8 @@ export const ImageEditor = () => {
               setTextLayers(prev => prev.filter(l => l.id !== layerId));
               saveState(fabricCanvas!);
             }}
+        onUpdateLayers={setTextLayers}
+        onAfterCanvasChange={() => saveState(fabricCanvas!)}
           />
         </div>
       </div>
