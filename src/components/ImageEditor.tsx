@@ -28,6 +28,8 @@ export interface EditorState {
   selectedLayerId: string | null;
   history: any[];
   historyIndex: number;
+  originalWidth?: number | null;
+  originalHeight?: number | null;
 }
 
 export const ImageEditor = () => {
@@ -38,6 +40,8 @@ export const ImageEditor = () => {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [originalImageWidth, setOriginalImageWidth] = useState<number | null>(null);
+  const [originalImageHeight, setOriginalImageHeight] = useState<number | null>(null);
 
   // Load saved state on mount (does not require canvas)
   useEffect(() => {
@@ -161,10 +165,12 @@ export const ImageEditor = () => {
         selectedLayerId,
         history,
         historyIndex,
+        originalWidth: originalImageWidth,
+        originalHeight: originalImageHeight,
       };
       localStorage.setItem("imageEditor", JSON.stringify(editorState));
     }
-  }, [backgroundImage, textLayers, selectedLayerId, history, historyIndex]);
+  }, [backgroundImage, textLayers, selectedLayerId, history, historyIndex, originalImageWidth, originalImageHeight]);
 
   const saveState = (canvas: FabricCanvas) => {
     // Ensure custom 'data' field is preserved in history for undo/redo
@@ -229,6 +235,8 @@ export const ImageEditor = () => {
         setSelectedLayerId(editorState.selectedLayerId);
         setHistory(editorState.history || []);
         setHistoryIndex(editorState.historyIndex || -1);
+        setOriginalImageWidth(editorState.originalWidth ?? null);
+        setOriginalImageHeight(editorState.originalHeight ?? null);
       } catch (error) {
         console.error("Error loading saved state:", error);
       }
@@ -277,6 +285,8 @@ export const ImageEditor = () => {
       targetCanvas.backgroundImage = img;
       targetCanvas.renderAll();
       setBackgroundImage(imageDataUrl);
+      setOriginalImageWidth(img.width!);
+      setOriginalImageHeight(img.height!);
       saveState(targetCanvas);
       toast.success("Image uploaded successfully!");
     }).catch((error) => {
@@ -329,10 +339,17 @@ export const ImageEditor = () => {
   const exportImage = () => {
     if (!fabricCanvas) return;
 
+    // Exportar no tamanho original da imagem de fundo, se disponível
+    const width = fabricCanvas.width!;
+    const height = fabricCanvas.height!;
+    const multiplier = originalImageWidth && width
+      ? originalImageWidth / width
+      : 1;
+
     const dataUrl = fabricCanvas.toDataURL({
       format: "png",
       quality: 1,
-      multiplier: 1,
+      multiplier: multiplier > 0 ? multiplier : 1,
     });
 
     const link = document.createElement("a");
@@ -359,6 +376,8 @@ export const ImageEditor = () => {
     setSelectedLayerId(null);
     setHistory([]);
     setHistoryIndex(-1);
+    setOriginalImageWidth(null);
+    setOriginalImageHeight(null);
 
     localStorage.removeItem("imageEditor");
     toast.success("Editor reset!");
