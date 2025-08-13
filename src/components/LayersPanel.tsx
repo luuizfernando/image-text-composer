@@ -158,7 +158,7 @@ export const LayersPanel = ({
                     e.stopPropagation();
                     moveLayer(layer.id, "up");
                   }}
-                  className="h-6 px-2 text-xs"
+                  className="h-7 px-2 text-sm text-white"
                   disabled={index === 0}
                 >
                   ↑
@@ -170,7 +170,7 @@ export const LayersPanel = ({
                     e.stopPropagation();
                     moveLayer(layer.id, "down");
                   }}
-                  className="h-6 px-2 text-xs"
+                  className="h-7 px-2 text-sm text-white"
                   disabled={index === layers.length - 1}
                 >
                   ↓
