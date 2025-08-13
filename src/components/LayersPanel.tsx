@@ -59,6 +59,7 @@ export const LayersPanel = ({
     if (targetObject) {
       targetObject.set("visible", !targetObject.visible);
       canvas.renderAll();
+      onAfterCanvasChange();
     }
   };
 
@@ -135,7 +136,16 @@ export const LayersPanel = ({
                   }}
                   className="h-6 w-6 p-0"
                 >
-                  <Eye className="h-3 w-3" />
+                  {(() => {
+                    if (!canvas) return <Eye className="h-3 w-3 text-white" />;
+                    const obj = canvas.getObjects().find((o: any) => o.data?.id === layer.id) as any;
+                    const isVisible = obj ? obj.visible !== false : true;
+                    return isVisible ? (
+                      <Eye className="h-3 w-3 text-white" />
+                    ) : (
+                      <EyeOff className="h-3 w-3 text-white" />
+                    );
+                  })()}
                 </Button>
                 <Button
                   variant="ghost"
