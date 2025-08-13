@@ -98,6 +98,7 @@ export const ImageEditor = () => {
 
     return () => {
       canvas.dispose();
+      setFabricCanvas(null);
     };
   }, [backgroundImage]);
 
@@ -343,20 +344,22 @@ export const ImageEditor = () => {
   };
 
   const resetEditor = () => {
-    if (!fabricCanvas) return;
-    
-    fabricCanvas.clear();
-    fabricCanvas.backgroundImage = null;
-    fabricCanvas.renderAll();
-    fabricCanvas.setDimensions({ width: 800, height: 600 });
-    fabricCanvas.backgroundColor = "#f8f9fa";
-    
+    if (fabricCanvas) {
+      try {
+        fabricCanvas.dispose();
+      } catch (e) {
+        // noop
+      }
+    }
+    setFabricCanvas(null);
+
+    // Resetar o estado do editor
     setBackgroundImage(null);
     setTextLayers([]);
     setSelectedLayerId(null);
     setHistory([]);
     setHistoryIndex(-1);
-    
+
     localStorage.removeItem("imageEditor");
     toast.success("Editor reset!");
   };

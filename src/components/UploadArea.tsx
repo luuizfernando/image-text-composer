@@ -17,6 +17,7 @@ export const UploadArea = ({ onImageUpload }: UploadAreaProps) => {
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       handleFiles(Array.from(e.target.files));
+      e.currentTarget.value = "";
     }
   }, []);
 
