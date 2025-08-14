@@ -70,6 +70,8 @@ export const ImageEditor = () => {
 
     canvas.on("selection:cleared", () => {
       setSelectedLayerId(null);
+      // Atualizar dicas de espaçamento
+      canvas.requestRenderAll();
     });
 
     canvas.on("object:modified", (e: any) => {
@@ -96,11 +98,119 @@ export const ImageEditor = () => {
         }));
       }
       saveState(canvas);
+      // Atualizar dicas de espaçamento
+      canvas.requestRenderAll();
     });
+
+    canvas.on("selection:updated", () => {
+      // Atualizar dicas de espaçamento
+      canvas.requestRenderAll();
+    });
+    canvas.on("selection:created", () => {
+      // Atualizar dicas de espaçamento
+      canvas.requestRenderAll();
+    });
+    canvas.on("object:moving", () => {
+      // Atualizar dicas de espaçamento em tempo real durante o movimento
+      canvas.requestRenderAll();
+    });
+
+    // Desenhar dicas de espaçamento no contexto superior (não exportado)
+    const renderSpacingHints = () => {
+      const anyCanvas = canvas as any;
+      if (!anyCanvas.contextTop) return;
+      anyCanvas.clearContext(anyCanvas.contextTop);
+
+      const getActive = (canvas as any).getActiveObjects
+        ? (canvas as any).getActiveObjects()
+        : [];
+      const activeObjects: any[] = Array.isArray(getActive) ? getActive : [];
+      if (!activeObjects || activeObjects.length < 2) return;
+
+      const rects = activeObjects.map((obj: any) => {
+        const r = obj.getBoundingRect(true, true);
+        return { obj, left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height, width: r.width, height: r.height };
+      });
+
+      const ctx: CanvasRenderingContext2D = anyCanvas.contextTop;
+      const drawDoubleArrow = (x1: number, y1: number, x2: number, y2: number) => {
+        const arrow = 6;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        // ponta 1
+        const angle1 = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x1 + arrow * Math.cos(angle1 + Math.PI / 6), y1 + arrow * Math.sin(angle1 + Math.PI / 6));
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x1 + arrow * Math.cos(angle1 - Math.PI / 6), y1 + arrow * Math.sin(angle1 - Math.PI / 6));
+        ctx.stroke();
+        // ponta 2
+        const angle2 = Math.atan2(y1 - y2, x1 - x2);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 + arrow * Math.cos(angle2 + Math.PI / 6), y2 + arrow * Math.sin(angle2 + Math.PI / 6));
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 + arrow * Math.cos(angle2 - Math.PI / 6), y2 + arrow * Math.sin(angle2 - Math.PI / 6));
+        ctx.stroke();
+      };
+
+      const drawLabel = (x: number, y: number, text: string) => {
+        ctx.font = "12px ui-sans-serif, system-ui, -apple-system";
+        ctx.textBaseline = "top";
+        const padding = 4;
+        const metrics = ctx.measureText(text);
+        const w = metrics.width + padding * 2;
+        const h = 16;
+        ctx.fillStyle = "#111827CC"; // bg slate-900/80
+        ctx.fillRect(x - w / 2, y - h / 2, w, h);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(text, x - metrics.width / 2, y - h / 2 + 2);
+      };
+
+      ctx.save();
+      ctx.strokeStyle = "#38bdf8"; // sky-400
+      ctx.lineWidth = 1.5;
+
+      // Horizontal: ordenar por left e medir gaps entre adjacentes com sobreposição vertical
+      const byX = [...rects].sort((a, b) => a.left - b.left);
+      for (let i = 0; i < byX.length - 1; i++) {
+        const a = byX[i];
+        const b = byX[i + 1];
+        const overlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        const gap = b.left - a.right; // se negativo, há sobreposição
+        if (overlapY > 0 && gap >= 0) {
+          const y = Math.max(a.top, b.top) + overlapY / 2;
+          drawDoubleArrow(a.right, y, b.left, y);
+          drawLabel((a.right + b.left) / 2, y - 10, `${Math.round(gap)}px`);
+        }
+      }
+
+      // Vertical: ordenar por top e medir gaps entre adjacentes com sobreposição horizontal
+      const byY = [...rects].sort((a, b) => a.top - b.top);
+      for (let i = 0; i < byY.length - 1; i++) {
+        const a = byY[i];
+        const b = byY[i + 1];
+        const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const gap = b.top - a.bottom;
+        if (overlapX > 0 && gap >= 0) {
+          const x = Math.max(a.left, b.left) + overlapX / 2;
+          drawDoubleArrow(x, a.bottom, x, b.top);
+          drawLabel(x, (a.bottom + b.top) / 2 - 10, `${Math.round(gap)}px`);
+        }
+      }
+
+      ctx.restore();
+    };
+
+    canvas.on("after:render", renderSpacingHints);
 
     setFabricCanvas(canvas);
 
     return () => {
+      canvas.off("after:render", renderSpacingHints);
       canvas.dispose();
       setFabricCanvas(null);
     };
@@ -346,6 +456,12 @@ export const ImageEditor = () => {
       ? originalImageWidth / width
       : 1;
 
+    // Limpar dicas visuais do contexto superior para não irem para a exportação
+    const anyCanvas = fabricCanvas as any;
+    if (anyCanvas.clearContext && anyCanvas.contextTop) {
+      anyCanvas.clearContext(anyCanvas.contextTop);
+    }
+
     const dataUrl = fabricCanvas.toDataURL({
       format: "png",
       quality: 1,
@@ -358,6 +474,8 @@ export const ImageEditor = () => {
     link.click();
     
     toast.success("Image exported successfully!");
+    // Re-render para restaurar as dicas no topo após exportar
+    fabricCanvas.requestRenderAll();
   };
 
   const resetEditor = () => {
