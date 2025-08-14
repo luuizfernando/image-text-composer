@@ -73,12 +73,10 @@ export const ImageEditor = () => {
     });
 
     // Canvas event handlers
-    canvas.on("selection:created", (e) => {
-      const activeObject = e.selected?.[0];
-      if (activeObject && (activeObject as any).data) {
-        setSelectedLayerId((activeObject as any).data.id);
-      }
-    });
+    const updateSelectionFromCanvas = () => {
+      const activeObject = canvas.getActiveObject() as any;
+      setSelectedLayerId(activeObject?.data?.id ?? null);
+    };
 
     canvas.on("selection:cleared", () => {
       setSelectedLayerId(null);
@@ -117,10 +115,12 @@ export const ImageEditor = () => {
     });
 
     canvas.on("selection:updated", () => {
+      updateSelectionFromCanvas();
       // Atualizar dicas de espaçamento
       canvas.requestRenderAll();
     });
     canvas.on("selection:created", () => {
+      updateSelectionFromCanvas();
       // Atualizar dicas de espaçamento
       canvas.requestRenderAll();
     });
