@@ -302,7 +302,7 @@ export const PropertiesPanel = ({
               onClick={() => fileInputRef.current?.click()}
               className="gap-2"
             >
-              Upload fonte (TTF/OTF/WOFF)
+              Upload font (TTF/OTF/WOFF)
             </Button>
           </div>
         </div>
