@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Canvas as FabricCanvas, IText as FabricIText, Image as FabricImage } from "fabric";
+import { Canvas as FabricCanvas, IText as FabricIText, Image as FabricImage, Shadow as FabricShadow } from "fabric";
 import { UploadArea } from "./UploadArea";
 import { Toolbar } from "./Toolbar";
 import { PropertiesPanel } from "./PropertiesPanel";
@@ -23,6 +23,10 @@ export interface TextLayer {
   lineHeight?: number;
   charSpacing?: number; // fabric units: 1/1000 em
   locked?: boolean;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
 }
 
 export interface EditorState {
@@ -262,6 +266,21 @@ export const ImageEditor = () => {
         lineHeight: layer.lineHeight ?? 1.2,
         charSpacing: layer.charSpacing ?? 0,
       });
+      // Aplicar shadow se houver
+      const hasShadow =
+        (layer.shadowBlur ?? 0) !== 0 ||
+        (layer.shadowOffsetX ?? 0) !== 0 ||
+        (layer.shadowOffsetY ?? 0) !== 0 ||
+        !!layer.shadowColor;
+      if (hasShadow) {
+        const shadow = new FabricShadow({
+          color: layer.shadowColor ?? "#000000",
+          blur: layer.shadowBlur ?? 0,
+          offsetX: layer.shadowOffsetX ?? 0,
+          offsetY: layer.shadowOffsetY ?? 0,
+        });
+        (textObject as any).set("shadow", shadow);
+      }
       const isLocked = !!layer.locked;
       textObject.set({ selectable: !isLocked, evented: !isLocked });
       (textObject as any).data = { id: layer.id, locked: isLocked };
@@ -334,6 +353,10 @@ export const ImageEditor = () => {
           lineHeight: typeof anyObj.lineHeight === "number" ? anyObj.lineHeight : 1.2,
           charSpacing: typeof anyObj.charSpacing === "number" ? anyObj.charSpacing : 0,
           locked: anyObj.selectable === false || anyObj.evented === false || !!anyObj.data?.locked,
+          shadowColor: anyObj.shadow?.color ?? undefined,
+          shadowBlur: typeof anyObj.shadow?.blur === "number" ? anyObj.shadow.blur : 0,
+          shadowOffsetX: typeof anyObj.shadow?.offsetX === "number" ? anyObj.shadow.offsetX : 0,
+          shadowOffsetY: typeof anyObj.shadow?.offsetY === "number" ? anyObj.shadow.offsetY : 0,
         });
       }
     }
@@ -432,6 +455,7 @@ export const ImageEditor = () => {
       lineHeight: 1.2,
       charSpacing: 0,
     });
+    (textObject as any).set("shadow", new FabricShadow({ color: "#000000", blur: 0, offsetX: 0, offsetY: 0 }));
     
     (textObject as any).data = { id, locked: false };
 
@@ -455,6 +479,10 @@ export const ImageEditor = () => {
       lineHeight: 1.2,
       charSpacing: 0,
       locked: false,
+      shadowColor: "#000000",
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
     };
 
     setTextLayers(prev => [...prev, newLayer]);

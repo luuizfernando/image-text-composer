@@ -101,6 +101,15 @@ export const PropertiesPanel = ({
     } else if (key === "charSpacing") {
       // Fabric espera charSpacing em 1/1000 em. Mantemos o controle em px aproximados: px * 50 ~ 1/1000 em
       activeObject.set("charSpacing", value);
+    } else if (key === "shadowColor" || key === "shadowBlur" || key === "shadowOffsetX" || key === "shadowOffsetY") {
+      const prevShadow: any = (activeObject as any).shadow || {};
+      const nextShadow = {
+        color: key === "shadowColor" ? value : (prevShadow.color ?? "#000000"),
+        blur: key === "shadowBlur" ? value : (prevShadow.blur ?? 0),
+        offsetX: key === "shadowOffsetX" ? value : (prevShadow.offsetX ?? 0),
+        offsetY: key === "shadowOffsetY" ? value : (prevShadow.offsetY ?? 0),
+      } as any;
+      (activeObject as any).set("shadow", nextShadow);
     }
 
     canvas.renderAll();
@@ -393,6 +402,96 @@ export const PropertiesPanel = ({
             />
             <div className="text-xs text-editor-panel-foreground">
               Dica: valores são em unidades do Fabric (1/1000 em). 0 é padrão.
+            </div>
+          </div>
+        </div>
+
+        {/* Text Shadow */}
+        <div>
+          <Label className="text-editor-panel-foreground">Text Shadow</Label>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Color</Label>
+              <div className="mt-1 flex gap-2 items-center">
+                <Input
+                  type="color"
+                  value={(properties.shadowColor as string) || "#000000"}
+                  onChange={(e) => updateProperty("shadowColor", e.target.value)}
+                  className="w-12 h-10 p-1 bg-editor-panel border-border"
+                />
+                <Input
+                  type="text"
+                  value={(properties.shadowColor as string) || "#000000"}
+                  onChange={(e) => updateProperty("shadowColor", e.target.value)}
+                  className="flex-1 bg-editor-panel border-border text-editor-panel-foreground"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Blur</Label>
+              <div className="mt-1 flex gap-2 items-center">
+                <Slider
+                  value={[Math.round((properties.shadowBlur as number) ?? 0)]}
+                  onValueChange={([value]) => updateProperty("shadowBlur", value)}
+                  max={100}
+                  min={0}
+                  step={1}
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  value={Math.round((properties.shadowBlur as number) ?? 0)}
+                  onChange={(e) => updateProperty("shadowBlur", parseInt(e.target.value, 10))}
+                  className="w-20 bg-editor-panel border-border text-editor-panel-foreground"
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Offset X</Label>
+              <div className="mt-1 flex gap-2 items-center">
+                <Slider
+                  value={[Math.round((properties.shadowOffsetX as number) ?? 0)]}
+                  onValueChange={([value]) => updateProperty("shadowOffsetX", value)}
+                  max={200}
+                  min={-200}
+                  step={1}
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  value={Math.round((properties.shadowOffsetX as number) ?? 0)}
+                  onChange={(e) => updateProperty("shadowOffsetX", parseInt(e.target.value, 10))}
+                  className="w-20 bg-editor-panel border-border text-editor-panel-foreground"
+                  min={-200}
+                  max={200}
+                  step={1}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Offset Y</Label>
+              <div className="mt-1 flex gap-2 items-center">
+                <Slider
+                  value={[Math.round((properties.shadowOffsetY as number) ?? 0)]}
+                  onValueChange={([value]) => updateProperty("shadowOffsetY", value)}
+                  max={200}
+                  min={-200}
+                  step={1}
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  value={Math.round((properties.shadowOffsetY as number) ?? 0)}
+                  onChange={(e) => updateProperty("shadowOffsetY", parseInt(e.target.value, 10))}
+                  className="w-20 bg-editor-panel border-border text-editor-panel-foreground"
+                  min={-200}
+                  max={200}
+                  step={1}
+                />
+              </div>
             </div>
           </div>
         </div>
