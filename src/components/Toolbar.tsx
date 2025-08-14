@@ -1,5 +1,6 @@
 import { Type, Download, RotateCcw, Undo2, Redo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Separator } from "@/components/ui/separator";
 
 interface ToolbarProps {
@@ -74,15 +75,24 @@ export const Toolbar = ({
           Save Image
         </Button>
 
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={onReset}
-          className="gap-2"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Reset
-        </Button>
+        <ConfirmDialog
+          title="Reset editor?"
+          description="This will erase all changes and return you to the upload screen."
+          confirmText="Reset"
+          cancelText="Cancel"
+          confirmDestructive
+          onConfirm={onReset}
+          trigger={
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset
+            </Button>
+          }
+        />
       </div>
     </div>
   );
