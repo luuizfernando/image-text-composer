@@ -42,6 +42,7 @@ export const PropertiesPanel = ({
 }: PropertiesPanelProps) => {
   const [properties, setProperties] = useState<Partial<TextLayer>>({});
   const [customFonts, setCustomFonts] = useState<string[]>([]);
+  const [fontSearch, setFontSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const CUSTOM_FONTS_STORAGE_KEY = "imageEditor.customFonts";
 
@@ -53,6 +54,12 @@ export const PropertiesPanel = ({
     if (properties.fontFamily) base.add(properties.fontFamily);
     return Array.from(base);
   }, [customFonts, properties.fontFamily]);
+
+  const filteredFonts = useMemo(() => {
+    const term = fontSearch.trim().toLowerCase();
+    if (!term) return FONT_OPTIONS;
+    return FONT_OPTIONS.filter((f) => f.toLowerCase().includes(term));
+  }, [FONT_OPTIONS, fontSearch]);
 
   const selectedLayer = textLayers.find(layer => layer.id === selectedLayerId);
 
@@ -243,6 +250,19 @@ export const PropertiesPanel = ({
         {/* Font Family */}
         <div>
           <Label className="text-editor-panel-foreground">Font Family</Label>
+          <Input
+            value={fontSearch}
+            onChange={(e) => setFontSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && filteredFonts.length > 0) {
+                const value = filteredFonts[0];
+                loadGoogleFont(value);
+                updateProperty("fontFamily", value);
+              }
+            }}
+            placeholder="Search font..."
+            className="mt-2 bg-editor-panel border-border text-editor-panel-foreground"
+          />
           <Select
             value={properties.fontFamily || "Arial"}
             onValueChange={(value) => {
@@ -254,7 +274,7 @@ export const PropertiesPanel = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {FONT_OPTIONS.map((font) => (
+              {filteredFonts.map((font) => (
                 <SelectItem key={font} value={font} style={{ fontFamily: font }}>
                   {font}
                 </SelectItem>
