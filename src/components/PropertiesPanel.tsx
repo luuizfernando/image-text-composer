@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Canvas as FabricCanvas, IText as FabricIText } from "fabric";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { TextLayer } from "./ImageEditor";
+import { toast } from "sonner";
 
 interface PropertiesPanelProps {
   selectedLayerId: string | null;
@@ -40,6 +41,18 @@ export const PropertiesPanel = ({
   canvas,
 }: PropertiesPanelProps) => {
   const [properties, setProperties] = useState<Partial<TextLayer>>({});
+  const [customFonts, setCustomFonts] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const CUSTOM_FONTS_STORAGE_KEY = "imageEditor.customFonts";
+
+  type CustomFontEntry = { name: string; dataUrl: string };
+
+  const FONT_OPTIONS = useMemo(() => {
+    const base = new Set<string>(GOOGLE_FONTS);
+    for (const f of customFonts) base.add(f);
+    if (properties.fontFamily) base.add(properties.fontFamily);
+    return Array.from(base);
+  }, [customFonts, properties.fontFamily]);
 
   const selectedLayer = textLayers.find(layer => layer.id === selectedLayerId);
 
@@ -98,6 +111,66 @@ export const PropertiesPanel = ({
     );
   };
 
+  const registerFontFromDataUrl = async (name: string, dataUrl: string) => {
+    const source = `url(${dataUrl})`;
+    const fontFace = new FontFace(name, source);
+    await fontFace.load();
+    (document as any).fonts.add(fontFace);
+  };
+
+  const handleCustomFontUpload = async (file: File) => {
+    try {
+      const nameFromFile = file.name.replace(/\.(ttf|otf|woff2?|TTF|OTF|WOFF2?)$/, "").trim() || `CustomFont-${Date.now()}`;
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(file);
+      });
+
+      await registerFontFromDataUrl(nameFromFile, dataUrl);
+
+      setCustomFonts(prev => prev.includes(nameFromFile) ? prev : [...prev, nameFromFile]);
+
+      // Persistir no localStorage
+      const savedRaw = localStorage.getItem(CUSTOM_FONTS_STORAGE_KEY);
+      const saved: CustomFontEntry[] = savedRaw ? JSON.parse(savedRaw) : [];
+      const withoutSameName = saved.filter(entry => entry.name !== nameFromFile);
+      withoutSameName.push({ name: nameFromFile, dataUrl });
+      localStorage.setItem(CUSTOM_FONTS_STORAGE_KEY, JSON.stringify(withoutSameName));
+
+      // Se houver uma camada selecionada, já aplica a fonte
+      updateProperty("fontFamily", nameFromFile);
+      toast.success(`Fonte "${nameFromFile}" carregada`);
+    } catch (error) {
+      console.error("Erro ao carregar fonte:", error);
+      toast.error("Falha ao carregar a fonte");
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const savedRaw = localStorage.getItem(CUSTOM_FONTS_STORAGE_KEY);
+      if (!savedRaw) return;
+      const saved: CustomFontEntry[] = JSON.parse(savedRaw);
+      const names: string[] = [];
+      const registerAll = async () => {
+        for (const entry of saved) {
+          try {
+            await registerFontFromDataUrl(entry.name, entry.dataUrl);
+            if (!names.includes(entry.name)) names.push(entry.name);
+          } catch (e) {
+            console.error("Falha ao registrar fonte persistida:", entry.name, e);
+          }
+        }
+        setCustomFonts(prev => Array.from(new Set([...prev, ...names])));
+      };
+      registerAll();
+    } catch (e) {
+      console.error("Erro ao restaurar fontes customizadas:", e);
+    }
+  }, []);
+
   const loadGoogleFont = (fontFamily: string) => {
     if (fontFamily === "Arial") return; // Skip default fonts
 
@@ -155,13 +228,37 @@ export const PropertiesPanel = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {GOOGLE_FONTS.map((font) => (
+              {FONT_OPTIONS.map((font) => (
                 <SelectItem key={font} value={font} style={{ fontFamily: font }}>
                   {font}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,application/font-woff,application/font-woff2"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.currentTarget.files?.[0];
+                if (file) {
+                  handleCustomFontUpload(file);
+                  // Permitir reupload do mesmo arquivo
+                  e.currentTarget.value = "";
+                }
+              }}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="gap-2"
+            >
+              Upload fonte (TTF/OTF/WOFF)
+            </Button>
+          </div>
         </div>
 
         {/* Font Size */}
