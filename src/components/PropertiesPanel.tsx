@@ -550,15 +550,7 @@ export const PropertiesPanel = ({
             <div />
             <div>
               <Label className="text-editor-panel-foreground text-xs">Radius</Label>
-              <div className="mt-1 flex gap-2 items-center">
-                <Slider
-                  value={[Math.round((properties.curveRadius as number) ?? 200)]}
-                  onValueChange={([value]) => updateProperty("curveRadius", value)}
-                  max={1000}
-                  min={50}
-                  step={5}
-                  className="w-full"
-                />
+              <div className="mt-1">
                 <Input
                   type="number"
                   value={Math.round((properties.curveRadius as number) ?? 200)}
@@ -572,15 +564,7 @@ export const PropertiesPanel = ({
             </div>
             <div>
               <Label className="text-editor-panel-foreground text-xs">Spacing (deg)</Label>
-              <div className="mt-1 flex gap-2 items-center">
-                <Slider
-                  value={[Number((properties.curveSpacingDeg as number) ?? 8)]}
-                  onValueChange={([value]) => updateProperty("curveSpacingDeg", value)}
-                  max={45}
-                  min={1}
-                  step={1}
-                  className="w-full"
-                />
+              <div className="mt-1">
                 <Input
                   type="number"
                   value={Number((properties.curveSpacingDeg as number) ?? 8)}
@@ -594,15 +578,7 @@ export const PropertiesPanel = ({
             </div>
             <div>
               <Label className="text-editor-panel-foreground text-xs">Start angle (deg)</Label>
-              <div className="mt-1 flex gap-2 items-center">
-                <Slider
-                  value={[Number((properties.curveStartAngleDeg as number) ?? 0)]}
-                  onValueChange={([value]) => updateProperty("curveStartAngleDeg", value)}
-                  max={360}
-                  min={-360}
-                  step={1}
-                  className="w-full"
-                />
+              <div className="mt-1">
                 <Input
                   type="number"
                   value={Number((properties.curveStartAngleDeg as number) ?? 0)}
