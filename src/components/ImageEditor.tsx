@@ -46,6 +46,8 @@ export interface EditorState {
 
 export const ImageEditor = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Área central onde o canvas deve ocupar o máximo possível
+  const editorViewportRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
@@ -477,24 +479,25 @@ export const ImageEditor = () => {
       return;
     }
 
-    console.log("Creating FabricImage from URL...");
+      console.log("Creating FabricImage from URL...");
     FabricImage.fromURL(imageDataUrl).then((img) => {
       console.log("FabricImage created successfully:", img);
-      // Set canvas size to match image aspect ratio
-      const maxWidth = 1200;
-      const maxHeight = 800;
+      // Dimensionar o canvas para ocupar o espaço disponível no centro
+      // mantendo o aspecto da imagem (contain)
+      const vpEl = editorViewportRef.current;
+      const vpRect = vpEl?.getBoundingClientRect();
+      const viewportWidth = Math.max(100, Math.floor((vpRect?.width ?? 1000)));
+      const viewportHeight = Math.max(100, Math.floor((vpRect?.height ?? 700)));
       const aspectRatio = img.width! / img.height!;
-      
-      let canvasWidth = Math.min(img.width!, maxWidth);
-      let canvasHeight = Math.min(img.height!, maxHeight);
-      
-      if (canvasWidth / canvasHeight > aspectRatio) {
-        canvasWidth = canvasHeight * aspectRatio;
-      } else {
-        canvasHeight = canvasWidth / aspectRatio;
+
+      let canvasWidth = viewportWidth;
+      let canvasHeight = Math.round(canvasWidth / aspectRatio);
+      if (canvasHeight > viewportHeight) {
+        canvasHeight = viewportHeight;
+        canvasWidth = Math.round(canvasHeight * aspectRatio);
       }
 
-      console.log("Setting canvas dimensions:", canvasWidth, "x", canvasHeight);
+      console.log("Setting canvas dimensions to viewport-fit:", canvasWidth, "x", canvasHeight);
       targetCanvas.setDimensions({ width: canvasWidth, height: canvasHeight });
       
       img.set({
@@ -694,7 +697,7 @@ export const ImageEditor = () => {
           canRedo={historyIndex < history.length - 1}
         />
         
-        <div className="flex-1 bg-editor-canvas p-8 overflow-auto">
+        <div ref={editorViewportRef} className="flex-1 bg-editor-canvas p-8 overflow-auto">
           <div className="flex items-center justify-center h-full">
             <div className="bg-white shadow-2xl rounded-lg overflow-hidden">
               <canvas ref={canvasRef} className="max-w-full max-h-full" />
