@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Canvas as FabricCanvas, IText as FabricIText, Image as FabricImage, Shadow as FabricShadow } from "fabric";
+import { Canvas as FabricCanvas, IText as FabricIText, Image as FabricImage, Shadow as FabricShadow, Text as FabricText, Group as FabricGroup } from "fabric";
 import { UploadArea } from "./UploadArea";
 import { Toolbar } from "./Toolbar";
 import { PropertiesPanel } from "./PropertiesPanel";
@@ -21,12 +21,17 @@ export interface TextLayer {
   scaleX: number;
   scaleY: number;
   lineHeight?: number;
-  charSpacing?: number; // fabric units: 1/1000 em
+  charSpacing?: number;
   locked?: boolean;
   shadowColor?: string;
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  isCurved?: boolean;
+  curveRadius?: number;
+  curveSpacingDeg?: number;
+  curveStartAngleDeg?: number;
+  curveClockwise?: boolean;
 }
 
 export interface EditorState {
@@ -233,66 +238,32 @@ export const ImageEditor = () => {
     }
   }, [fabricCanvas, backgroundImage]);
 
-  // Re-create text objects on the canvas from saved state once the canvas is ready
+  // Sincronizar canvas a partir do estado (inclui texto curvado)
   useEffect(() => {
     if (!fabricCanvas) return;
-    if (textLayers.length === 0) return;
 
-    const existingIds = new Set(
-      fabricCanvas
-        .getObjects()
-        .map((obj: any) => obj.data?.id)
-        .filter(Boolean)
-    );
-
-    let addedAny = false;
-    for (const layer of textLayers) {
-      if (existingIds.has(layer.id)) continue;
-
-      const textObject = new FabricIText(layer.text, {
-        left: layer.left,
-        top: layer.top,
-        fontSize: layer.fontSize,
-        fontFamily: layer.fontFamily,
-        fontWeight: layer.fontWeight as any,
-        fill: layer.fill,
-        opacity: layer.opacity,
-        textAlign: layer.textAlign as any,
-        angle: layer.angle,
-        scaleX: layer.scaleX,
-        scaleY: layer.scaleY,
-        originX: "left",
-        originY: "top",
-        lineHeight: layer.lineHeight ?? 1.2,
-        charSpacing: layer.charSpacing ?? 0,
-      });
-      // Aplicar shadow se houver
-      const hasShadow =
-        (layer.shadowBlur ?? 0) !== 0 ||
-        (layer.shadowOffsetX ?? 0) !== 0 ||
-        (layer.shadowOffsetY ?? 0) !== 0 ||
-        !!layer.shadowColor;
-      if (hasShadow) {
-        const shadow = new FabricShadow({
-          color: layer.shadowColor ?? "#000000",
-          blur: layer.shadowBlur ?? 0,
-          offsetX: layer.shadowOffsetX ?? 0,
-          offsetY: layer.shadowOffsetY ?? 0,
-        });
-        (textObject as any).set("shadow", shadow);
+    const layerIds = new Set(textLayers.map(l => l.id));
+    // Remover objetos que não existem mais
+    fabricCanvas.getObjects().forEach((obj: any) => {
+      const id = obj?.data?.id as string | undefined;
+      if (id && !layerIds.has(id)) {
+        fabricCanvas.remove(obj);
       }
-      const isLocked = !!layer.locked;
-      textObject.set({ selectable: !isLocked, evented: !isLocked });
-      (textObject as any).data = { id: layer.id, locked: isLocked };
-      fabricCanvas.add(textObject);
-      addedAny = true;
+    });
+
+    // Recriar/atualizar
+    for (const layer of textLayers) {
+      rebuildLayerOnCanvas(layer, fabricCanvas);
     }
 
-    if (addedAny) {
-      fabricCanvas.renderAll();
-      saveState(fabricCanvas);
+    // Restaurar seleção
+    if (selectedLayerId) {
+      const target = fabricCanvas.getObjects().find((o: any) => o.data?.id === selectedLayerId);
+      if (target) fabricCanvas.setActiveObject(target as any);
     }
-  }, [fabricCanvas]);
+
+    fabricCanvas.renderAll();
+  }, [fabricCanvas, textLayers, selectedLayerId]);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -323,6 +294,115 @@ export const ImageEditor = () => {
     }
     
     setHistory(newHistory);
+  };
+
+  const rebuildLayerOnCanvas = (layer: TextLayer, canvas: FabricCanvas) => {
+    // remove objetos antigos com o mesmo id
+    canvas.getObjects().forEach((obj: any) => {
+      if (obj?.data?.id === layer.id) {
+        canvas.remove(obj);
+      }
+    });
+
+    if (layer.isCurved) {
+      const text = layer.text ?? "";
+      const radius = layer.curveRadius ?? 200;
+      const spacingDeg = layer.curveSpacingDeg ?? 8;
+      const startDeg = layer.curveStartAngleDeg ?? 0;
+      const clockwise = layer.curveClockwise ?? true;
+      const angleDir = clockwise ? 1 : -1;
+      const chars: any[] = [];
+      const fontSize = layer.fontSize ?? 32;
+      const fontFamily = layer.fontFamily ?? "Arial";
+      const fontWeight = layer.fontWeight ?? "normal";
+      const fill = layer.fill ?? "#000000";
+      const opacity = layer.opacity ?? 1;
+      const lineHeight = layer.lineHeight ?? 1.2;
+      const charSpacing = layer.charSpacing ?? 0;
+      const shadow = new FabricShadow({
+        color: layer.shadowColor ?? "#000000",
+        blur: layer.shadowBlur ?? 0,
+        offsetX: layer.shadowOffsetX ?? 0,
+        offsetY: layer.shadowOffsetY ?? 0,
+      });
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const thetaDeg = startDeg + angleDir * spacingDeg * i;
+        const thetaRad = (thetaDeg * Math.PI) / 180;
+        const x = radius * Math.cos(thetaRad);
+        const y = radius * Math.sin(thetaRad);
+        const t = new FabricText(ch, {
+          left: x,
+          top: y,
+          originX: "center",
+          originY: "center",
+          angle: thetaDeg + (clockwise ? 90 : -90),
+          fontSize,
+          fontFamily,
+          fontWeight: fontWeight as any,
+          fill,
+          opacity,
+          lineHeight,
+          charSpacing,
+        });
+        (t as any).set("shadow", shadow);
+        chars.push(t);
+      }
+
+      const group = new FabricGroup(chars, {
+        left: (layer.left ?? 0),
+        top: (layer.top ?? 0),
+        originX: "left",
+        originY: "top",
+      });
+      (group as any).data = {
+        id: layer.id,
+        curved: true,
+        curve: {
+          radius,
+          spacingDeg,
+          startDeg,
+          clockwise,
+        },
+      };
+      const isLocked = !!layer.locked;
+      group.set({ selectable: !isLocked, evented: !isLocked });
+      canvas.add(group);
+      canvas.renderAll();
+      return;
+    }
+
+    // Texto normal
+    const textObject = new FabricIText(layer.text ?? "", {
+      left: layer.left ?? 0,
+      top: layer.top ?? 0,
+      fontSize: layer.fontSize ?? 32,
+      fontFamily: layer.fontFamily ?? "Arial",
+      fontWeight: layer.fontWeight as any,
+      fill: layer.fill ?? "#000000",
+      opacity: layer.opacity ?? 1,
+      textAlign: layer.textAlign as any,
+      angle: layer.angle ?? 0,
+      scaleX: layer.scaleX ?? 1,
+      scaleY: layer.scaleY ?? 1,
+      originX: "left",
+      originY: "top",
+      lineHeight: layer.lineHeight ?? 1.2,
+      charSpacing: layer.charSpacing ?? 0,
+    });
+    const isLocked = !!layer.locked;
+    textObject.set({ selectable: !isLocked, evented: !isLocked });
+    const shadow = new FabricShadow({
+      color: layer.shadowColor ?? "#000000",
+      blur: layer.shadowBlur ?? 0,
+      offsetX: layer.shadowOffsetX ?? 0,
+      offsetY: layer.shadowOffsetY ?? 0,
+    });
+    (textObject as any).set("shadow", shadow);
+    (textObject as any).data = { id: layer.id, locked: isLocked };
+    canvas.add(textObject);
+    canvas.renderAll();
   };
 
   const collectLayersFromCanvas = (canvas: FabricCanvas): TextLayer[] => {

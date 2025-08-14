@@ -65,24 +65,25 @@ export const PropertiesPanel = ({
   const updateProperty = (key: keyof TextLayer, value: any) => {
     if (!selectedLayerId || !canvas) return;
 
-    const activeObject = canvas.getActiveObject() as FabricIText;
+    const activeObject = canvas.getActiveObject() as any;
     if (!activeObject) return;
+    const isGroup = activeObject.type === "group";
 
     // Update fabric object
     if (key === "text") {
-      activeObject.set("text", value);
+      if (!isGroup) activeObject.set("text", value);
     } else if (key === "fontFamily") {
-      activeObject.set("fontFamily", value);
+      if (!isGroup) activeObject.set("fontFamily", value);
     } else if (key === "fontSize") {
-      activeObject.set("fontSize", value);
+      if (!isGroup) activeObject.set("fontSize", value);
     } else if (key === "fontWeight") {
-      activeObject.set("fontWeight", value);
+      if (!isGroup) activeObject.set("fontWeight", value);
     } else if (key === "fill") {
-      activeObject.set("fill", value);
+      if (!isGroup) activeObject.set("fill", value);
     } else if (key === "opacity") {
       // Slider fornece 0..100. Canvas e estado guardam 0..1
       const normalized = value / 100;
-      activeObject.set("opacity", normalized);
+      if (!isGroup) activeObject.set("opacity", normalized);
       // Atualiza estado com valor normalizado (0..1)
       setProperties(prev => ({ ...prev, [key]: normalized }));
       onUpdateLayer(prev => 
@@ -92,27 +93,38 @@ export const PropertiesPanel = ({
             : layer
         )
       );
-      canvas.renderAll();
+      if (!isGroup) canvas.renderAll();
       return;
     } else if (key === "textAlign") {
-      activeObject.set("textAlign", value);
+      if (!isGroup) activeObject.set("textAlign", value);
     } else if (key === "lineHeight") {
-      activeObject.set("lineHeight", value);
+      if (!isGroup) activeObject.set("lineHeight", value);
     } else if (key === "charSpacing") {
       // Fabric espera charSpacing em 1/1000 em. Mantemos o controle em px aproximados: px * 50 ~ 1/1000 em
-      activeObject.set("charSpacing", value);
+      if (!isGroup) activeObject.set("charSpacing", value);
     } else if (key === "shadowColor" || key === "shadowBlur" || key === "shadowOffsetX" || key === "shadowOffsetY") {
-      const prevShadow: any = (activeObject as any).shadow || {};
-      const nextShadow = {
-        color: key === "shadowColor" ? value : (prevShadow.color ?? "#000000"),
-        blur: key === "shadowBlur" ? value : (prevShadow.blur ?? 0),
-        offsetX: key === "shadowOffsetX" ? value : (prevShadow.offsetX ?? 0),
-        offsetY: key === "shadowOffsetY" ? value : (prevShadow.offsetY ?? 0),
-      } as any;
-      (activeObject as any).set("shadow", nextShadow);
+      if (!isGroup) {
+        const prevShadow: any = (activeObject as any).shadow || {};
+        const nextShadow = {
+          color: key === "shadowColor" ? value : (prevShadow.color ?? "#000000"),
+          blur: key === "shadowBlur" ? value : (prevShadow.blur ?? 0),
+          offsetX: key === "shadowOffsetX" ? value : (prevShadow.offsetX ?? 0),
+          offsetY: key === "shadowOffsetY" ? value : (prevShadow.offsetY ?? 0),
+        } as any;
+        (activeObject as any).set("shadow", nextShadow);
+      }
+    } else if (
+      key === "isCurved" ||
+      key === "curveRadius" ||
+      key === "curveSpacingDeg" ||
+      key === "curveStartAngleDeg" ||
+      key === "curveClockwise"
+    ) {
+      // Para objetos em grupo (curvados), apenas atualizamos o estado
+      // e deixamos o efeito de sincronização no editor reconstruir o objeto.
     }
 
-    canvas.renderAll();
+    if (!isGroup) canvas.renderAll();
 
     // Update state
     setProperties(prev => ({ ...prev, [key]: value }));
@@ -521,6 +533,99 @@ export const PropertiesPanel = ({
             >
               <AlignRight className="h-4 w-4" />
             </Button>
+          </div>
+        </div>
+
+        {/* Curved Text */}
+        <div>
+          <Label className="text-editor-panel-foreground">Curved Text</Label>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <Button
+              variant={properties.isCurved ? "default" : "outline"}
+              size="sm"
+              onClick={() => updateProperty("isCurved", !properties.isCurved)}
+            >
+              {properties.isCurved ? "Disable" : "Enable"}
+            </Button>
+            <div />
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Radius</Label>
+              <div className="mt-1 flex gap-2 items-center">
+                <Slider
+                  value={[Math.round((properties.curveRadius as number) ?? 200)]}
+                  onValueChange={([value]) => updateProperty("curveRadius", value)}
+                  max={1000}
+                  min={50}
+                  step={5}
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  value={Math.round((properties.curveRadius as number) ?? 200)}
+                  onChange={(e) => updateProperty("curveRadius", parseInt(e.target.value, 10))}
+                  className="w-24 bg-editor-panel border-border text-editor-panel-foreground"
+                  min={50}
+                  max={1000}
+                  step={5}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Spacing (deg)</Label>
+              <div className="mt-1 flex gap-2 items-center">
+                <Slider
+                  value={[Number((properties.curveSpacingDeg as number) ?? 8)]}
+                  onValueChange={([value]) => updateProperty("curveSpacingDeg", value)}
+                  max={45}
+                  min={1}
+                  step={1}
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  value={Number((properties.curveSpacingDeg as number) ?? 8)}
+                  onChange={(e) => updateProperty("curveSpacingDeg", parseInt(e.target.value, 10))}
+                  className="w-24 bg-editor-panel border-border text-editor-panel-foreground"
+                  min={1}
+                  max={45}
+                  step={1}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Start angle (deg)</Label>
+              <div className="mt-1 flex gap-2 items-center">
+                <Slider
+                  value={[Number((properties.curveStartAngleDeg as number) ?? 0)]}
+                  onValueChange={([value]) => updateProperty("curveStartAngleDeg", value)}
+                  max={360}
+                  min={-360}
+                  step={1}
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  value={Number((properties.curveStartAngleDeg as number) ?? 0)}
+                  onChange={(e) => updateProperty("curveStartAngleDeg", parseInt(e.target.value, 10))}
+                  className="w-24 bg-editor-panel border-border text-editor-panel-foreground"
+                  min={-360}
+                  max={360}
+                  step={1}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-editor-panel-foreground text-xs">Clockwise</Label>
+              <div className="mt-1">
+                <Button
+                  variant={(properties.curveClockwise ?? true) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => updateProperty("curveClockwise", !(properties.curveClockwise ?? true))}
+                >
+                  {(properties.curveClockwise ?? true) ? "Yes" : "No"}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
