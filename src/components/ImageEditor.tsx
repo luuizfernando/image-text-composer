@@ -22,6 +22,7 @@ export interface TextLayer {
   scaleY: number;
   lineHeight?: number;
   charSpacing?: number; // fabric units: 1/1000 em
+  locked?: boolean;
 }
 
 export interface EditorState {
@@ -261,7 +262,9 @@ export const ImageEditor = () => {
         lineHeight: layer.lineHeight ?? 1.2,
         charSpacing: layer.charSpacing ?? 0,
       });
-      (textObject as any).data = { id: layer.id };
+      const isLocked = !!layer.locked;
+      textObject.set({ selectable: !isLocked, evented: !isLocked });
+      (textObject as any).data = { id: layer.id, locked: isLocked };
       fabricCanvas.add(textObject);
       addedAny = true;
     }
@@ -330,6 +333,7 @@ export const ImageEditor = () => {
           scaleY: anyObj.scaleY ?? 1,
           lineHeight: typeof anyObj.lineHeight === "number" ? anyObj.lineHeight : 1.2,
           charSpacing: typeof anyObj.charSpacing === "number" ? anyObj.charSpacing : 0,
+          locked: anyObj.selectable === false || anyObj.evented === false || !!anyObj.data?.locked,
         });
       }
     }
@@ -429,7 +433,7 @@ export const ImageEditor = () => {
       charSpacing: 0,
     });
     
-    (textObject as any).data = { id };
+    (textObject as any).data = { id, locked: false };
 
     fabricCanvas.add(textObject);
     fabricCanvas.setActiveObject(textObject);
@@ -450,6 +454,7 @@ export const ImageEditor = () => {
       scaleY: 1,
       lineHeight: 1.2,
       charSpacing: 0,
+      locked: false,
     };
 
     setTextLayers(prev => [...prev, newLayer]);

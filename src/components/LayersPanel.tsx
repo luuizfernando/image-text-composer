@@ -1,6 +1,6 @@
 import { Canvas as FabricCanvas } from "fabric";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Type, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Type, Trash2, Lock, Unlock, Copy } from "lucide-react";
 import { TextLayer } from "./ImageEditor";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -47,6 +47,73 @@ export const LayersPanel = ({
       canvas.renderAll();
       onLayerSelect(null);
       onDeleteLayer(layerId);
+    }
+  };
+
+  const toggleLockLayer = (layerId: string) => {
+    if (!canvas) return;
+    const obj = canvas.getObjects().find((o: any) => o.data?.id === layerId) as any;
+    if (!obj) return;
+    const currentlyLocked = (!obj.selectable && !obj.evented) || !!obj.data?.locked;
+    const nextLocked = !currentlyLocked;
+    obj.set({ selectable: !nextLocked, evented: !nextLocked });
+    if (obj.data) obj.data.locked = nextLocked;
+    canvas.requestRenderAll();
+    onUpdateLayers(prev => prev.map(l => l.id === layerId ? { ...l, locked: nextLocked } : l));
+    onAfterCanvasChange();
+  };
+
+  const duplicateLayer = (layerId: string) => {
+    if (!canvas) return;
+    const obj = canvas.getObjects().find((o: any) => o.data?.id === layerId) as any;
+    if (!obj) return;
+    const doAppend = (cloned: any) => {
+      const newId = `text-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      cloned.set({ left: (obj.left ?? 0) + 20, top: (obj.top ?? 0) + 20 });
+      if (!cloned.data) cloned.data = {};
+      cloned.data.id = newId;
+      // manter estado de lock da origem
+      const originLocked = (!obj.selectable && !obj.evented) || !!obj.data?.locked;
+      cloned.set({ selectable: !originLocked, evented: !originLocked });
+      cloned.data.locked = originLocked;
+      canvas.add(cloned);
+      canvas.setActiveObject(cloned);
+      // garantir que a cópia fique no topo
+      if (typeof (cloned as any).bringToFront === "function") {
+        (cloned as any).bringToFront();
+      } else if (typeof (canvas as any).bringObjectToFront === "function") {
+        (canvas as any).bringObjectToFront(cloned);
+      }
+      canvas.requestRenderAll();
+      onUpdateLayers(prev => {
+        const base = prev.find(l => l.id === layerId) as TextLayer;
+        const newLayer: TextLayer = {
+          ...base,
+          id: newId,
+          left: (obj.left ?? 0) + 20,
+          top: (obj.top ?? 0) + 20,
+        };
+        return [...prev, newLayer];
+      });
+      onAfterCanvasChange();
+    };
+
+    // clone em Fabric v6 é promessa
+    if (typeof obj.clone === "function") {
+      const result = obj.clone();
+      if (result && typeof (result as any).then === "function") {
+        (result as Promise<any>).then((cloned) => doAppend(cloned));
+      } else {
+        // alguns builds ainda suportam callback
+        try {
+          obj.clone((cloned: any) => doAppend(cloned));
+        } catch {
+          // último recurso: usar toObject + constructor
+          const Ctor = (obj as any).constructor as any;
+          const clone = new Ctor(obj.text, { ...obj.toObject(), left: (obj.left ?? 0) + 20, top: (obj.top ?? 0) + 20 });
+          doAppend(clone);
+        }
+      }
     }
   };
 
@@ -146,6 +213,37 @@ export const LayersPanel = ({
                       <EyeOff className="h-3 w-3 text-white" />
                     );
                   })()}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLockLayer(layer.id);
+                  }}
+                  className="h-6 w-6 p-0"
+                >
+                  {(() => {
+                    if (!canvas) return <Lock className="h-3 w-3 text-white" />;
+                    const obj = canvas.getObjects().find((o: any) => o.data?.id === layer.id) as any;
+                    const locked = obj ? (!obj.selectable && !obj.evented) : false;
+                    return locked ? (
+                      <Lock className="h-3 w-3 text-white" />
+                    ) : (
+                      <Unlock className="h-3 w-3 text-white" />
+                    );
+                  })()}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    duplicateLayer(layer.id);
+                  }}
+                  className="h-6 w-6 p-0"
+                >
+                  <Copy className="h-3 w-3 text-white" />
                 </Button>
                 <Button
                   variant="ghost"
