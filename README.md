@@ -14,6 +14,8 @@ npm run dev
 ```
 The app starts at http://localhost:8080
 
+You can access it publicly through the url https://image-text-composer-neon.vercel.app/
+
 No environment variables or backend services are required.
 
 ## Features
