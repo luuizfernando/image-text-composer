@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="50%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#F472B6"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded gradient tile -->
+  <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#bg)"/>
+
+  <!-- Mini image canvas -->
+  <rect x="14" y="18" width="36" height="26" rx="6" fill="#ffffff" opacity="0.95"/>
+  <!-- Sun -->
+  <circle cx="43" cy="24" r="4" fill="#FBBF24"/>
+  <!-- Mountains -->
+  <path d="M18 40 L26 30 L34 40 Z" fill="url(#accent)"/>
+  <path d="M28 40 L36 34 L50 40 Z" fill="#60A5FA"/>
+
+  <!-- Magic wand to evoke editing -->
+  <rect x="36" y="36" width="14" height="3" rx="1.5" transform="rotate(45 36 36)" fill="#111827"/>
+  <circle cx="50" cy="22" r="2" fill="#ffffff"/>
+  <path d="M50 18 l1.6 3.2 3.4.5 -2.5 2.4 .6 3.4 -3.1-1.6 -3.1 1.6 .6-3.4 -2.5-2.4 3.4-.5z" fill="#ffffff" opacity="0.95"/>
+</svg>
