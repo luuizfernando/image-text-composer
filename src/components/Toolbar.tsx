@@ -68,10 +68,10 @@ export const Toolbar = ({
           size="sm"
           onClick={onExport}
           className="gap-2"
-          aria-label="Salvar imagem"
+          aria-label="Save Image"
         >
           <Download className="h-4 w-4" />
-          Salvar imagem
+          Save Image
         </Button>
 
         <Button
