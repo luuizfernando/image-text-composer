@@ -1,4 +1,4 @@
-# Image Text Composer
+# Image Text Composer - Adomate Coding Assignment
 
 An in-browser editor to compose PNG images with rich text overlays. Upload a PNG, add and style multiple text layers, and export the result — all client-side.
 
