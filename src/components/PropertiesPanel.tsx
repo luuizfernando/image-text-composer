@@ -96,6 +96,11 @@ export const PropertiesPanel = ({
       return;
     } else if (key === "textAlign") {
       activeObject.set("textAlign", value);
+    } else if (key === "lineHeight") {
+      activeObject.set("lineHeight", value);
+    } else if (key === "charSpacing") {
+      // Fabric espera charSpacing em 1/1000 em. Mantemos o controle em px aproximados: px * 50 ~ 1/1000 em
+      activeObject.set("charSpacing", value);
     }
 
     canvas.renderAll();
@@ -337,6 +342,57 @@ export const PropertiesPanel = ({
             />
             <div className="text-sm text-editor-panel-foreground">
               {Math.round((properties.opacity ?? 1) * 100)}%
+            </div>
+          </div>
+        </div>
+
+        {/* Line Height */}
+        <div>
+          <Label className="text-editor-panel-foreground">Line Height</Label>
+          <div className="mt-2 space-y-2">
+            <Slider
+              value={[Number((properties.lineHeight ?? 1.2).toFixed(2))]}
+              onValueChange={([value]) => updateProperty("lineHeight", value)}
+              max={3}
+              min={0.8}
+              step={0.05}
+              className="w-full"
+            />
+            <Input
+              type="number"
+              value={Number((properties.lineHeight ?? 1.2).toFixed(2))}
+              onChange={(e) => updateProperty("lineHeight", parseFloat(e.target.value))}
+              className="bg-editor-panel border-border text-editor-panel-foreground"
+              min={0.8}
+              max={3}
+              step={0.05}
+            />
+          </div>
+        </div>
+
+        {/* Letter Spacing */}
+        <div>
+          <Label className="text-editor-panel-foreground">Letter Spacing</Label>
+          <div className="mt-2 space-y-2">
+            <Slider
+              value={[Math.round((properties.charSpacing ?? 0))]}
+              onValueChange={([value]) => updateProperty("charSpacing", value)}
+              max={1000}
+              min={-200}
+              step={5}
+              className="w-full"
+            />
+            <Input
+              type="number"
+              value={Math.round((properties.charSpacing ?? 0))}
+              onChange={(e) => updateProperty("charSpacing", parseInt(e.target.value, 10))}
+              className="bg-editor-panel border-border text-editor-panel-foreground"
+              min={-200}
+              max={1000}
+              step={5}
+            />
+            <div className="text-xs text-editor-panel-foreground">
+              Dica: valores são em unidades do Fabric (1/1000 em). 0 é padrão.
             </div>
           </div>
         </div>

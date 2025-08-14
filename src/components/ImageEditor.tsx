@@ -20,6 +20,8 @@ export interface TextLayer {
   angle: number;
   scaleX: number;
   scaleY: number;
+  lineHeight?: number;
+  charSpacing?: number; // fabric units: 1/1000 em
 }
 
 export interface EditorState {
@@ -94,6 +96,8 @@ export const ImageEditor = () => {
             fill: target.fill ?? layer.fill,
             opacity: typeof target.opacity === "number" ? target.opacity : layer.opacity,
             textAlign: (target.textAlign ?? layer.textAlign) as any,
+            lineHeight: typeof target.lineHeight === "number" ? target.lineHeight : (layer.lineHeight ?? 1.2),
+            charSpacing: typeof target.charSpacing === "number" ? target.charSpacing : (layer.charSpacing ?? 0),
           };
         }));
       }
@@ -254,6 +258,8 @@ export const ImageEditor = () => {
         scaleY: layer.scaleY,
         originX: "left",
         originY: "top",
+        lineHeight: layer.lineHeight ?? 1.2,
+        charSpacing: layer.charSpacing ?? 0,
       });
       (textObject as any).data = { id: layer.id };
       fabricCanvas.add(textObject);
@@ -322,6 +328,8 @@ export const ImageEditor = () => {
           angle: anyObj.angle ?? 0,
           scaleX: anyObj.scaleX ?? 1,
           scaleY: anyObj.scaleY ?? 1,
+          lineHeight: typeof anyObj.lineHeight === "number" ? anyObj.lineHeight : 1.2,
+          charSpacing: typeof anyObj.charSpacing === "number" ? anyObj.charSpacing : 0,
         });
       }
     }
@@ -417,6 +425,8 @@ export const ImageEditor = () => {
       fill: "#000000",
       originX: "center",
       originY: "center",
+      lineHeight: 1.2,
+      charSpacing: 0,
     });
     
     (textObject as any).data = { id };
@@ -438,6 +448,8 @@ export const ImageEditor = () => {
       angle: 0,
       scaleX: 1,
       scaleY: 1,
+      lineHeight: 1.2,
+      charSpacing: 0,
     };
 
     setTextLayers(prev => [...prev, newLayer]);
