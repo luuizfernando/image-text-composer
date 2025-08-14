@@ -14,12 +14,6 @@ npm run dev
 ```
 The app starts at http://localhost:8080
 
-Build and preview production:
-```bash
-npm run build
-npm run preview
-```
-
 No environment variables or backend services are required.
 
 ## Features
